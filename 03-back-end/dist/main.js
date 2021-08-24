@@ -3,8 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const cors = require("cors");
 const dev_1 = require("./config/dev");
-const service_1 = require("./components/category/service");
-const controller_1 = require("./components/category/controller");
+const router_1 = require("./components/category/router");
 const application = express();
 application.use(cors());
 application.use(express.json());
@@ -21,10 +20,7 @@ application.use(dev_1.default.server.static.route, express.static(dev_1.default.
     etag: dev_1.default.server.static.etag,
     dotfiles: dev_1.default.server.static.dotfiles
 }));
-const categoryService = new service_1.default();
-const categoryController = new controller_1.default(categoryService);
-application.get("/category", categoryController.getAll.bind(categoryController));
-application.get("/category/:id", categoryController.getById.bind(categoryController));
+router_1.default.setupRoutes(application);
 application.use((req, res) => {
     res.sendStatus(404);
 });
