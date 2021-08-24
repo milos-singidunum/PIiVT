@@ -19,6 +19,22 @@ class CategoryController {
             res.send(categories);
         });
     }
+    getById(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const id = req.params.id;
+            const categoryId = +id;
+            if (categoryId <= 0) {
+                res.sendStatus(400);
+                return;
+            }
+            const category = yield this.categoryService.getById(+id);
+            if (category === null) {
+                res.sendStatus(404);
+                return;
+            }
+            res.send(category);
+        });
+    }
 }
 exports.default = CategoryController;
 //# sourceMappingURL=controller.js.map

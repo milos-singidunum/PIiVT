@@ -31,6 +31,7 @@ const categoryService: CategoryService = new CategoryService();
 const categoryController: CategoryController = new CategoryController(categoryService);
 
 application.get("/category" , categoryController.getAll.bind(categoryController));
+application.get("/category/:id", categoryController.getById.bind(categoryController)) //:id => indikator za promenjive rute(varjabilno)
 
 
 application.use((req,res) => {  // hendler use treba uvek da bude poslednji

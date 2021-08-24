@@ -24,6 +24,7 @@ application.use(dev_1.default.server.static.route, express.static(dev_1.default.
 const categoryService = new service_1.default();
 const categoryController = new controller_1.default(categoryService);
 application.get("/category", categoryController.getAll.bind(categoryController));
+application.get("/category/:id", categoryController.getById.bind(categoryController));
 application.use((req, res) => {
     res.sendStatus(404);
 });
