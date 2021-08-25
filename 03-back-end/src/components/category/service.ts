@@ -3,13 +3,9 @@ import * as mysql2 from 'mysql2/promise';
 import IModelAdapterOptions from '../../common/IModelAdapterOptions.interface';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
 import { errorMonitor } from "events";
+import BaseService from "../../services/BaseService";
 
-class CategoryService {
-    private db: mysql2.Connection;
-
-    constructor(db: mysql2.Connection) {
-        this.db = db;
-    }
+class CategoryService extends BaseService<CategoryModel> {
 
     protected async adaptModel(
         row: any,
@@ -41,95 +37,28 @@ class CategoryService {
     }
 
     public async getAll(): Promise<CategoryModel[]|IErrorResponse> {
-        return new Promise<CategoryModel[]|IErrorResponse>(async (resolve) => {
-            const sql: string = "SELECT * FROM category WHERE parent__category_id IS NULL;";
-            this.db.execute(sql)
-                .then(async (result) => {
-                    const rows = result[0];
-                    const lista: CategoryModel[] = [];
-                    if (Array.isArray(rows)) {
-                        for(const row of rows) {
-                            lista.push(
-                                await this.adaptModel(
-                                    row, {
-                                        loadChildren:true,
-                                    },
-                                )
-                            )
-                        }
-                    }
-                    resolve(lista);
-                })
-                .catch(error => {
-                    resolve({
-                        errorCode: error?.errno,
-                        errorMessage: error?.sqlMessage
-                    });
-                }); 
-        });
+        return await this.getAllFromTable(
+            'category' ,
+             {
+                 loadChildren:true,
+             }
+             );
     }
 
     public async getAllByParrentCategoryId(parentCatagoryId: number): Promise<CategoryModel[]|IErrorResponse> {
-        try {
-            const lista: CategoryModel[] = [];
-            const sql: string = "SELECT * FROM category WHERE parent__category_id =?;";
-            const [rows , columns] = await this.db.execute(sql, [ parentCatagoryId]);
-
-            if (Array.isArray(rows)) {
-                for(const row of rows) {
-                    lista.push(
-                        await this.adaptModel(
-                            row, {
-                                loadChildren:true,
-                            },
-                        )
-                    )    
-                }
+       return await this.getAllByFieldNameFromTable(
+           'category',
+           'parent__category_id',
+            parentCatagoryId,
+            {
+                loadChildren: true,
             }
-
-            return lista;
-        } catch (error) {
-            return {
-                errorCode: error?.errno,
-                errorMessage: error?.sqlMessage
-            }
-
-        }    
+        );    
     }
 
     public async getById(categoryId:number): Promise<CategoryModel|null|IErrorResponse>{
-        return new Promise<CategoryModel|null|IErrorResponse>(async resolve => {
-            const sql:string = "SELECT * FROM category WHERE category_id = ?;";
-            this.db.execute(sql, [ categoryId ])
-                .then(async result => {
-                    const [rows , columns] = result;
-
-                    if (!Array.isArray(rows)) {
-                        resolve(null);
-                        return;
-                    }
-            
-                    if (rows.length === 0) {
-                        resolve(null);
-                        return;
-                    }
-
-                    resolve(await this.adaptModel(
-                        rows[0],
-                        {
-                            loadChildren: true,
-                            loadParent : true,
-                        }
-                    ));
-                 })
-                .catch(error => {
-                    resolve({
-                        errorCode: error?.errno,
-                        errorMessage: error?.sqlMessage
-                    });
-                });
-            });
-        }
+        return await this.getByIdFromTable("category" , categoryId);
+    }
 
 }
 export default CategoryService;
