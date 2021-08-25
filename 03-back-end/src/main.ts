@@ -4,6 +4,7 @@ import Config from "./config/dev";
 import CategoryRouter from './components/category/router';
 import * as mysql2 from "mysql2/promise";
 import IApplicationResources from "./common/IApplicationResources.interface";
+import Router from "./router";
 
 async function main() {
     const application: express.Application = express();
@@ -25,13 +26,7 @@ async function main() {
 
     resources.databaseConnection.connect();
 
-    //slanje nekog hardkodovanog objekta na putanju /about [handler]
-    application.get("/about", (req,res) => {
-        res.send({
-            "title": "About us", 
-            "content": "<p> About us... </p>"
-        }); 
-    });
+
     //Staticko servisiranje
     application.use(
         Config.server.static.route,
@@ -44,9 +39,10 @@ async function main() {
 
     }));
 
-    CategoryRouter.setupRoutes(application, resources);
-
-
+    Router.setupRoutes(application,resources,[
+        new CategoryRouter(),
+    ]);
+    
     application.use((req,res) => {  // hendler use treba uvek da bude poslednji
         res.sendStatus(404);
     });
