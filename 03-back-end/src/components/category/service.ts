@@ -31,7 +31,11 @@ class CategoryService extends BaseService<CategoryModel> {
         }
 
         if (options.loadSubcategories) {
-            const data = await this.getAllByParrentCategoryId(item.categoryId);
+            const data = await this.getAllByParrentCategoryId(
+                item.categoryId,
+                {
+                    loadSubcategories: true,
+                });
             if (Array.isArray(data)) {
                 item.subcategories = data;
             }
@@ -40,35 +44,37 @@ class CategoryService extends BaseService<CategoryModel> {
         return item;
     }
 
-    public async getAll(): Promise<CategoryModel[]|IErrorResponse> {
+    public async getAll(
+        options: Partial<CategoryModelAdapterOptions> = {},
+    ): Promise<CategoryModel[]|IErrorResponse> {
         return await this.getAllByFieldNameFromTable<CategoryModelAdapterOptions>(
             'category' ,
             'parent__category_id',
             null,
-             {
-                 loadSubcategories:true,
-             }
+            options,
              );
     }
 
-    public async getAllByParrentCategoryId(parentCatagoryId: number): Promise<CategoryModel[]|IErrorResponse> {
+    public async getAllByParrentCategoryId(
+        parentCatagoryId: number,
+        options: Partial<CategoryModelAdapterOptions> = {},
+        ): Promise<CategoryModel[]|IErrorResponse> {
        return await this.getAllByFieldNameFromTable<CategoryModelAdapterOptions>(
            'category',
            'parent__category_id',
             parentCatagoryId,
-            {
-                loadSubcategories: true,
-            }
+            options,
         );    
     }
 
-    public async getById(categoryId:number): Promise<CategoryModel|null|IErrorResponse>{
+    public async getById(
+        categoryId:number,
+        options: Partial<CategoryModelAdapterOptions> = { },
+        ): Promise<CategoryModel|null|IErrorResponse>{
         return await this.getByIdFromTable<CategoryModelAdapterOptions>(
             "category" ,
             categoryId,
-            {
-             loadSubcategories: true,
-            }
+            options
         );
     }
 
