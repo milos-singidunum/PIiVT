@@ -7,8 +7,7 @@ import FilmController from "./controller";
 export default class FilmRouter implements IRouter {
     public setupRoutes(application: express.Application, resources:IApplicationResources){
 
-        const filmService: FilmService = new FilmService(resources.databaseConnection);
-        const filmController: FilmController = new FilmController(filmService);
+        const filmController: FilmController = new FilmController(resources);
 
         application.get("/film" ,              filmController.getAll.bind(filmController));
         application.get("/film/:id" ,          filmController.getById.bind(filmController));

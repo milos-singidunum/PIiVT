@@ -3,13 +3,9 @@ import FilmService from './service';
 import FilmModel from './model';
 import { IAddFilm, IAddFilmValidator } from './dto/AddFilm';
 import { IEditFilm, IEditFilmValidator } from './dto/EditFilm';
+import BaseController from '../../common/BaseController';
 
-class FilmController {
-    private filmService: FilmService;
-
-    constructor(filmService:FilmService) {
-        this.filmService = filmService;
-    }
+class FilmController extends BaseController{
 
     public async getById(req: Request, res: Response, next: NextFunction) {
        const id: string = req.params.id;
@@ -21,7 +17,7 @@ class FilmController {
            return;
        }
 
-       const result = await this.filmService.getById(filmId, {
+       const result = await this.services.filmService.getById(filmId, {
            loadCategory: true,
        });
 
@@ -39,13 +35,13 @@ class FilmController {
     }
 
     async getAll(req: Request, res: Response, next: NextFunction) {
-        const films = await this.filmService.getAll();
+        const films = await this.services.filmService.getAll();
         res.send(films);
     }
 
     public async getAllFilmFromOneCategory(req: Request, res: Response, next: NextFunction) {
         const categoryId: number = +(req.params.cid);
-        res.send(await this.filmService.getAllByCategoryId(categoryId));
+        res.send(await this.services.filmService.getAllByCategoryId(categoryId));
     }
 
     public async add(req:Request , res:Response) {
@@ -55,7 +51,7 @@ class FilmController {
             return;
         }
 
-        res.send(await this.filmService.add(req.body as IAddFilm));
+        res.send(await this.services.filmService.add(req.body as IAddFilm));
     }
 
     public async edit(req: Request, res: Response) {
@@ -71,7 +67,7 @@ class FilmController {
             return;
         }
 
-        const result = await this.filmService.getById(filmId);
+        const result = await this.services.filmService.getById(filmId);
 
         if (result === null) {
             res.sendStatus(404);
@@ -83,7 +79,7 @@ class FilmController {
             return;
         }
 
-        res.send(await this.filmService.edit(filmId, req.body as IEditFilm));
+        res.send(await this.services.filmService.edit(filmId, req.body as IEditFilm));
     }
 }
 

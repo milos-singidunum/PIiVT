@@ -14,13 +14,7 @@ class FilmModelAdapterOptions implements IModelAdapterOptions {
 
 
 class FilmService extends BaseService<FilmModel> {
-    private CategoryService: CategoryService;
-    constructor(db: mysql2.Connection) {
-        super(db);
-        this.CategoryService = new CategoryService(this.db);
-    }
-
-    protected async adaptModel(
+     protected async adaptModel(
         data: any,
         options: Partial<FilmModelAdapterOptions>
     ): Promise<FilmModel> {
@@ -36,7 +30,7 @@ class FilmService extends BaseService<FilmModel> {
         item.categoryId = +(data?.category_id);
 
         if (options.loadCategory && item.categoryId) {
-           const result = await this.CategoryService.getById(item.categoryId);
+           const result = await this.services.categoryService.getById(item.categoryId);
         
             if (result instanceof CategoryModel) {
                 item.category = result;

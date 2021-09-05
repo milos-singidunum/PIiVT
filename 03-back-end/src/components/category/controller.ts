@@ -2,17 +2,13 @@ import CategoryService from './service';
 import {Request, Response, NextFunction} from "express";
 import CategoryModel from './model';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
+import BaseController from '../../common/BaseController';
 
-class CategoryController {
-    private categoryService: CategoryService;
-
-    constructor(categoryService: CategoryService) {
-        this.categoryService = categoryService;
-    }
+class CategoryController extends BaseController {
     
     // hendler za getAll
     async getAll(req: Request, res: Response, next: NextFunction) {
-        const categories = await this.categoryService.getAll();
+        const categories = await this.services.categoryService.getAll();
         res.send(categories);
     }
 
@@ -25,7 +21,7 @@ class CategoryController {
             res.sendStatus(400);
             return;
         }
-        const data: CategoryModel|null|IErrorResponse = await this.categoryService.getById(+id);
+        const data: CategoryModel|null|IErrorResponse = await this.services.categoryService.getById(+id);
 
         if (data === null) {
             res.sendStatus(404);

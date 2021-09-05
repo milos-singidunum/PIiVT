@@ -7,6 +7,9 @@ import IApplicationResources from "./common/IApplicationResources.interface";
 import Router from "./router";
 import FilmRouter from './components/film/router';
 import GenreRouter from './components/genre/router';
+import CategoryService from "./components/category/service";
+import GenreService from "./components/genre/service";
+import FilmService from "./components/film/service";
 
 async function main() {
     const application: express.Application = express();
@@ -27,6 +30,13 @@ async function main() {
     }
 
     resources.databaseConnection.connect();
+
+    resources.services = {
+        categoryService:      new CategoryService(resources),
+        filmService:          new FilmService(resources),
+        genreService:         new GenreService(resources),
+       
+    };
 
 
     //Staticko servisiranje
