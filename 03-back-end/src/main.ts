@@ -5,6 +5,8 @@ import CategoryRouter from './components/category/router';
 import * as mysql2 from "mysql2/promise";
 import IApplicationResources from "./common/IApplicationResources.interface";
 import Router from "./router";
+import FilmRouter from './components/film/router';
+import GenreRouter from './components/genre/router';
 
 async function main() {
     const application: express.Application = express();
@@ -41,6 +43,8 @@ async function main() {
 
     Router.setupRoutes(application,resources,[
         new CategoryRouter(),
+        new FilmRouter(),
+        new GenreRouter(),
     ]);
     
     application.use((req,res) => {  // hendler use treba uvek da bude poslednji
