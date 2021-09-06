@@ -1,15 +1,14 @@
 import IModelAdapterOptions from '../../common/IModelAdapterOptions.interface';
 import BaseService from '../../services/BaseService';
-import FilmModel from './model';
-import * as mysql2 from 'mysql2/promise';
-import CategoryService from '../category/service';
+import FilmModel, { FilmGenres } from './model';
 import CategoryModel from '../category/model';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
 import { IAddFilm } from './dto/AddFilm';
 import { IEditFilm } from './dto/EditFilm';
 
 class FilmModelAdapterOptions implements IModelAdapterOptions {
-    loadCategory: boolean = false;
+    loadCategory: boolean = true;
+    loadGenres: boolean = true;
 }
 
 
@@ -28,7 +27,7 @@ class FilmService extends BaseService<FilmModel> {
         item.description = data?.description;
         item.picturePath = data?.picture_path;
         item.categoryId = +(data?.category_id);
-
+        /*
         if (options.loadCategory && item.categoryId) {
            const result = await this.services.categoryService.getById(item.categoryId);
         
@@ -36,8 +35,45 @@ class FilmService extends BaseService<FilmModel> {
                 item.category = result;
             }
         }
+         */
+        if (options.loadCategory) {
+            item.category = await this.services.categoryService.getById(item.categoryId) as CategoryModel;
+        }
+
+        if (options.loadGenres) {
+            item.genres = await this.getAllGenresByFilmId(item.filmId);
+        }
+        
 
         return item;
+    }
+
+    private async getAllGenresByFilmId(filmId: number): Promise<FilmGenres[]> {
+        const sql = `
+            SELECT
+                film_genre.genre_id,
+                genre.name
+            FROM
+                film_genre
+            INNER JOIN genre ON genre.genre_id = film_genre.genre_id
+            WHERE
+                film_genre.film_id = ?;`;
+        const [ rows ] = await this.db.execute(sql, [ filmId ]);
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return [];
+        }
+
+        const items: FilmGenres[] = [];
+
+        for (const row of rows as any) {
+            items.push({
+                genreId: +(row?.genre_id),
+                name: row?.name,
+            });
+        }
+
+        return items;
     }
 
     public async getById(

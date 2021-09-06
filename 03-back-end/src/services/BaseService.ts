@@ -77,10 +77,7 @@ export default abstract class BaseService<ReturnModel extends IModel> {
 
                     resolve(await this.adaptModel(
                         rows[0],
-                        {
-                            loadChildren: true,
-                            loadParent : true,
-                        }
+                        options
                     ));
                  })
                 .catch(error => {
@@ -112,7 +109,7 @@ export default abstract class BaseService<ReturnModel extends IModel> {
                     if (Array.isArray(rows)) {
                         for(const row of rows) {
                             lista.push(
-                                await this.adaptModel(row, {},)
+                                await this.adaptModel(row, options)
                             )
                         }
                     }

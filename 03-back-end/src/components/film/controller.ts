@@ -8,30 +8,39 @@ import BaseController from '../../common/BaseController';
 class FilmController extends BaseController{
 
     public async getById(req: Request, res: Response, next: NextFunction) {
-       const id: string = req.params.id;
+       const id: number = +(req.params?.id);
        
-       const filmId: number = +id;
+       if (id <= 0) {
+        res.sendStatus(400);
+        return;
+    }
 
-       if (filmId <= 0) {
-           res.sendStatus(400);
-           return;
-       }
+    const item = await this.services.filmService.getById(
+        id,
+        {
+            loadCategory: true,
+            loadGenres: true,
+        }
+    );
 
-       const result = await this.services.filmService.getById(filmId, {
-           loadCategory: true,
-       });
-
-       if ( result === null) {
+       if ( item === null) {
            res.sendStatus(404);
            return;
        }
 
+       if (item === null) {
+        res.sendStatus(404);
+        return;
+        }
+
+        res.send(item);
+        /*
        if (result instanceof FilmModel) {
            res.send(result);
            return;
        }
 
-       res.status(500).send(result);
+       res.status(500).send(result); */
     }
 
     async getAll(req: Request, res: Response, next: NextFunction) {
