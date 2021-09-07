@@ -1,9 +1,9 @@
 import { Request, Response , NextFunction } from 'express';
-import FilmService from './service';
-import FilmModel from './model';
-import { IAddFilm, IAddFilmValidator } from './dto/AddFilm';
-import { IEditFilm, IEditFilmValidator } from './dto/EditFilm';
+import { IAddFilm, IAddFilmValidator, UploadFilmPhoto } from './dto/AddFilm';
 import BaseController from '../../common/BaseController';
+import * as fileUpload from 'express-fileupload';
+import Config from '../../config/dev';
+import {v4} from "uuid";
 
 class FilmController extends BaseController{
 
@@ -20,6 +20,7 @@ class FilmController extends BaseController{
         {
             loadCategory: true,
             loadGenres: true,
+            loadPhotos: true,
         }
     );
 
@@ -52,7 +53,7 @@ class FilmController extends BaseController{
         const categoryId: number = +(req.params.cid);
         res.send(await this.services.filmService.getAllByCategoryId(categoryId));
     }
-
+    /*
     public async add(req:Request , res:Response) {
         
         if(!IAddFilmValidator(req.body)) {
@@ -62,7 +63,58 @@ class FilmController extends BaseController{
 
         res.send(await this.services.filmService.add(req.body as IAddFilm));
     }
+    */
 
+    public async add(req: Request , res: Response) {
+        
+        if(!req.files || Object.keys(req.files).length === 0) {
+            res.status(400).send("You must upload at lease one and a maxumum of" + Config.fileUpload.maxFiles + "photos.");
+            return;
+        }
+
+        const fileKeys: string[] = Object.keys(req.files);
+
+        const uploadFilmPhotos: UploadFilmPhoto[] = [];
+
+        for(const fileKey of fileKeys) {
+            const file = req.files[fileKey] as any;
+            
+            const randomString = v4();
+            const originalName = file?.name;
+            const now = new Date();
+            const imagePath = Config.fileUpload.uploadDestinationDirectory + 
+                              (Config.fileUpload.uploadDestinationDirectory.endsWith("/") ? "" : "/") +
+                              now.getFullYear() + "/" +
+                              ((now.getMonth() + 1) + "").padStart(2,"0") + "/" + 
+                              randomString + "-" + originalName;
+
+           await file.mv(imagePath);
+
+           uploadFilmPhotos.push({
+               imagePath: imagePath,
+           });
+        }
+
+        try {
+            const data = JSON.parse(req.body?.data);
+
+            if (!IAddFilmValidator(data)) {
+                res.status(400).send(IAddFilmValidator.errors);
+                return;
+            }
+
+            const result = await this.services.filmService.add(data as IAddFilm, uploadFilmPhotos);
+
+            res.send(result);
+
+         } catch (e) {
+            
+            res.status(400).send(e?.message);
+        }
+
+        
+    }
+    /*
     public async edit(req: Request, res: Response) {
         const filmId = +(req.params.id);
 
@@ -89,7 +141,7 @@ class FilmController extends BaseController{
         }
 
         res.send(await this.services.filmService.edit(filmId, req.body as IEditFilm));
-    }
+    } */
 }
 
 export default FilmController;

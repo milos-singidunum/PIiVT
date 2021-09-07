@@ -1,4 +1,5 @@
 import Ajv from "ajv";
+import { FilmGenres } from "../model";
 
 interface IAddFilm {
     title: string,
@@ -6,8 +7,12 @@ interface IAddFilm {
     year: string,
     directorName: string,
     description: string;
-    picturePath: string;
     categoryId: number;
+    genres: FilmGenres[];
+}
+
+interface IUploadPhoto {
+    imagePath: string;
 }
 
 const ajv = new Ajv();
@@ -15,7 +20,7 @@ const ajv = new Ajv();
 const IAddFilmValidator = ajv.compile({
     type: "object",
     properties: {
-        
+
         title: {
             type: "string",
             minLength: 2,
@@ -38,17 +43,29 @@ const IAddFilmValidator = ajv.compile({
         },
         description: {
             type: "string",
-            minLength: 32,
             maxLength:255,
-        },
-        picturePath: {
-            type: "string",
-            minLength: 255,
-            pattern: "\.(png|jpg)$",
         },
         categoryId: {
             type: "integer",
             minimum:1,
+        },
+        genres: {
+            type: "array",
+            minItems: 0,
+            uniqueItems: true,
+            items: {
+                type: "object",
+                properties: {
+                    genreId: {
+                        type: "number",
+                        minimum: 1,
+                    }
+                },
+                required: [
+                    "genreId",
+                ],
+                additionalProperties: false,
+            },
         },
     },
     required: [
@@ -57,8 +74,8 @@ const IAddFilmValidator = ajv.compile({
        "year",
        "directorName",
        "description",
-       "picturePath",
        "categoryId",
+       "genres",
     ],
     additionalProperties: false,
 
@@ -66,3 +83,4 @@ const IAddFilmValidator = ajv.compile({
 
 export { IAddFilm };
 export { IAddFilmValidator};
+export { IUploadPhoto as UploadFilmPhoto };

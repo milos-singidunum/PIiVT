@@ -10,12 +10,27 @@ import GenreRouter from './components/genre/router';
 import CategoryService from "./components/category/service";
 import GenreService from "./components/genre/service";
 import FilmService from "./components/film/service";
+import * as fileUpload from "express-fileupload";
 
 async function main() {
     const application: express.Application = express();
 
     application.use(cors()); // [handler -> instalirali smo ga nmp i cors]
     application.use(express.json()); // za parsiranje json-a [handler]
+    application.use(fileUpload({
+        limits: {
+            fileSize: Config.fileUpload.maxSize,
+            files: Config.fileUpload.maxFiles,
+        },
+        useTempFiles: true,
+        tempFileDir: Config.fileUpload.temporaryDirectory,
+        uploadTimeout: Config.fileUpload.timeout,
+        safeFileNames: true,  
+        preserveExtension: true, // da osiguramo da se ekstenzije ne izbrisu
+        createParentPath: true, 
+        abortOnLimit: true, // ako file upload ne prodje ,controler nece ni uzmati u obiz fajl
+
+    }));
 
     const resources: IApplicationResources = {
         databaseConnection: await mysql2.createConnection({

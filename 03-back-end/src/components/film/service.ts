@@ -3,12 +3,13 @@ import BaseService from '../../services/BaseService';
 import FilmModel, { FilmGenres } from './model';
 import CategoryModel from '../category/model';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
-import { IAddFilm } from './dto/AddFilm';
-import { IEditFilm } from './dto/EditFilm';
+import { IAddFilm, UploadFilmPhoto } from './dto/AddFilm';
+
 
 class FilmModelAdapterOptions implements IModelAdapterOptions {
     loadCategory: boolean = true;
     loadGenres: boolean = true;
+    loadPhotos: boolean = false;
 }
 
 
@@ -25,17 +26,9 @@ class FilmService extends BaseService<FilmModel> {
         item.year = data?.year;
         item.directorName = data?.director_name;
         item.description = data?.description;
-        item.picturePath = data?.picture_path;
         item.categoryId = +(data?.category_id);
-        /*
-        if (options.loadCategory && item.categoryId) {
-           const result = await this.services.categoryService.getById(item.categoryId);
-        
-            if (result instanceof CategoryModel) {
-                item.category = result;
-            }
-        }
-         */
+    
+
         if (options.loadCategory) {
             item.category = await this.services.categoryService.getById(item.categoryId) as CategoryModel;
         }
@@ -78,9 +71,9 @@ class FilmService extends BaseService<FilmModel> {
 
     public async getById(
         filmId: number,
-        options: Partial<FilmModelAdapterOptions> = {}
-    ): Promise<FilmModel|null|IErrorResponse> {
-        return await this.getByIdFromTable("film" , filmId, options);
+        options: Partial<FilmModelAdapterOptions> = {},
+    ): Promise<FilmModel|IErrorResponse|null> {
+        return  this.getByIdFromTable("film" , filmId, options);
     }
 
     public async getAll(
@@ -98,32 +91,93 @@ class FilmService extends BaseService<FilmModel> {
     ): Promise<FilmModel[]|IErrorResponse> {
         return await this.getAllByFieldNameFromTable("film", "category_id" , categoryId , options);
     }
+    
 
-    public async add(data: IAddFilm): Promise<FilmModel|IErrorResponse> {
+    public async add(
+        data: IAddFilm,
+        uploadedPhotos: UploadFilmPhoto[],
+    ): Promise<FilmModel|IErrorResponse> {
         return new Promise<FilmModel|IErrorResponse>(resolve => {
-            const sql = "INSERT film SET title = ? , serbian_title = ? , year = ? , director_name = ? , description = ? , picture_path = ? , category_id = ?;";
-            this.db.execute(sql , [
-                data.title , 
-                data.serbianTitle , 
-                data.year , 
-                data.directorName , 
-                data.description , 
-                data.picturePath , 
-                data.categoryId])
-                    .then(async result => {
-                        const insertInfo: any = result[0];
-                        const newId: number = +(insertInfo?.insertId);
-                        resolve(await this.getById(newId));
+            this.db.beginTransaction()
+            .then( () => {
+               this.db.execute(
+                   `INSERT film
+                    SET 
+                    title =           ?,
+                    serbian_title =   ?,
+                    year =            ?,
+                    director_name =   ?, 
+                    description =     ?,
+                    category_id =     ?; 
+                `,
+                [
+                    data.title,
+                    data.serbianTitle,
+                    data.year,
+                    data.directorName,
+                    data.description,
+                    data.categoryId,
+                ]
+                ).then(async (res: any) => {
+                    const newFilmId: number = +(res[0]?.insertId);
+                    
+                    const promises = [];
+
+                    for (const filmGenre of data.genres) {
+                        promises.push(
+                            this.db.execute(
+                                `INSERT film_genre
+                                SET film_id = ? ,  genre_id = ?;`,
+                                [newFilmId , filmGenre.genreId ]
+                            ),
+                        );
+                    } 
+
+                    for (const uploadPhoto of uploadedPhotos) {
+                        promises.push(
+                            this.db.execute(
+                                `INSERT photo SET film_id = ? , image_path = ?;`,
+                                [newFilmId, uploadPhoto.imagePath,]
+                            ),
+                        );
+                    }
+
+                    Promise.all(promises)
+                    .then(async () => {
+                        await this.db.commit();
+
+                        resolve(await this.services.filmService.getById(
+                            newFilmId,
+                            {
+                                loadCategory: true,
+                                loadGenres: true,
+                                loadPhotos: true,
+                        
+                            } 
+                        ))
                     })
-                    .catch(error => {
+                    .catch(async error => {
+                        await this.db.rollback();
+    
                         resolve({
                             errorCode : error?.errno,
                             errorMessage:  error?.sqlMessage
                         });
                     })
-        })
+                }) 
+                .catch(async error => {
+                    await this.db.rollback();
+
+                    resolve({
+                        errorCode : error?.errno,
+                        errorMessage:  error?.sqlMessage
+                    });
+                })
+            });
+        });
     }
 
+/*
     public async edit(
         filmId: number,
         data: IEditFilm,
@@ -159,7 +213,7 @@ class FilmService extends BaseService<FilmModel> {
                     });
                 })
         });
-    }
+    } */
 }
 
 export default FilmService;

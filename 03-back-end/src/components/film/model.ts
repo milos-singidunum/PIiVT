@@ -13,7 +13,6 @@ class FilmModel implements IModel {
     year: string;
     directorName: string;
     description: string;
-    picturePath: string;
     categoryId: number;
     category?: CategoryModel;
     genres: FilmGenres[] = [];
