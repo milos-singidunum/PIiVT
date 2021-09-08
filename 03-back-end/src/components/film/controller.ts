@@ -5,6 +5,8 @@ import { UploadedFile } from 'express-fileupload';
 import Config from '../../config/dev';
 import {v4} from "uuid";
 import sizeOf from "image-size";
+import * as path from "path";
+import * as sharp from "sharp";
 
 class FilmController extends BaseController{
 
@@ -53,6 +55,30 @@ class FilmController extends BaseController{
     public async getAllFilmFromOneCategory(req: Request, res: Response, next: NextFunction) {
         const categoryId: number = +(req.params.cid);
         res.send(await this.services.filmService.getAllByCategoryId(categoryId));
+    }
+
+    private async resizeUploadedPhoto(imagePath: string) {
+        const pathParts = path.parse(imagePath);
+
+        const directory = pathParts.dir;
+        const filename  = pathParts.name;
+        const extension = pathParts.ext;
+
+        for (const resizeSpecification of Config.fileUpload.photos.resizes) {
+            const resizedImagePath = directory + "/" +
+                                     filename +
+                                     resizeSpecification.sufix +
+                                     extension;
+            await sharp(imagePath)
+                .resize({
+                    width: resizeSpecification.width,
+                    height: resizeSpecification.height,
+                    fit: resizeSpecification.fit,
+                    background: { r: 255, g: 255, b: 255, alpha: 1.0, },
+                    withoutEnlargement: true,
+                })
+                .toFile(resizedImagePath);
+        }
     }
 
     private isPhotoValid(file:UploadedFile):{ isOk: boolean; message?:string } {
@@ -116,6 +142,7 @@ class FilmController extends BaseController{
                               randomString + "-" + originalName;
 
            await file.mv(imagePath);
+           await this.resizeUploadedPhoto(imagePath);
 
            uploadFilmPhotos.push({
                imagePath: imagePath,
