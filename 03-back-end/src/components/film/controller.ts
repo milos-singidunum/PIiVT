@@ -1,9 +1,10 @@
 import { Request, Response , NextFunction } from 'express';
 import { IAddFilm, IAddFilmValidator, UploadFilmPhoto } from './dto/AddFilm';
 import BaseController from '../../common/BaseController';
-import * as fileUpload from 'express-fileupload';
+import { UploadedFile } from 'express-fileupload';
 import Config from '../../config/dev';
 import {v4} from "uuid";
+import sizeOf from "image-size";
 
 class FilmController extends BaseController{
 
@@ -53,23 +54,42 @@ class FilmController extends BaseController{
         const categoryId: number = +(req.params.cid);
         res.send(await this.services.filmService.getAllByCategoryId(categoryId));
     }
-    /*
-    public async add(req:Request , res:Response) {
-        
-        if(!IAddFilmValidator(req.body)) {
-            res.status(400).send(IAddFilmValidator.errors);
-            return;
+
+    private isPhotoValid(file:UploadedFile):{ isOk: boolean; message?:string } {
+        const size = sizeOf(file.tempFilePath);
+        const limits = Config.fileUpload.photos.limits;
+       
+        if ( size.width < limits.minWidth) { 
+            return { 
+                isOk: false,
+                message: `The ime must have a width of at least ${limits.minWidth}px.`,
+            }
         }
 
-        res.send(await this.services.filmService.add(req.body as IAddFilm));
-    }
-    */
+        if (size.height < limits.minHeight) {
+            return {
+                isOk: false,
+                message: `The ime must have a height of at least ${limits.minHeight}px.`,
+            }
+        }
 
-    public async add(req: Request , res: Response) {
+        if (size.width > limits.maxWidth) {
+            return {
+                isOk: false,
+                message: `The ime must have a width of at most ${limits.maxWidth}px.`,
+            }
+        }
+
+        return {
+            isOk:true,
+        }
+    }
+    
+    private async uploadFiles(req: Request , res: Response):Promise<UploadFilmPhoto[]> {
         
         if(!req.files || Object.keys(req.files).length === 0) {
             res.status(400).send("You must upload at lease one and a maxumum of" + Config.fileUpload.maxFiles + "photos.");
-            return;
+            return[];
         }
 
         const fileKeys: string[] = Object.keys(req.files);
@@ -78,6 +98,13 @@ class FilmController extends BaseController{
 
         for(const fileKey of fileKeys) {
             const file = req.files[fileKey] as any;
+
+            const result = this.isPhotoValid(file);
+
+            if (result.isOk === false) {
+                res.status(400).send(`Error with image ${fileKey}: "${result.message}".`);
+                return [];
+            }
             
             const randomString = v4();
             const originalName = file?.name;
@@ -95,7 +122,18 @@ class FilmController extends BaseController{
            });
         }
 
+        return uploadFilmPhotos;
+    }
+
+    public async add(req: Request , res: Response) {
+        const uploadedPhotos = await this.uploadFiles(req,res);
+
+       if (uploadedPhotos.length === 0) {
+           return;
+       }
+       
         try {
+
             const data = JSON.parse(req.body?.data);
 
             if (!IAddFilmValidator(data)) {
@@ -103,7 +141,7 @@ class FilmController extends BaseController{
                 return;
             }
 
-            const result = await this.services.filmService.add(data as IAddFilm, uploadFilmPhotos);
+            const result = await this.services.filmService.add(data as IAddFilm, uploadedPhotos);
 
             res.send(result);
 
