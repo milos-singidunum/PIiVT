@@ -4,6 +4,8 @@ import FilmModel, { FilmGenres } from './model';
 import CategoryModel from '../category/model';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
 import { IAddFilm, UploadFilmPhoto } from './dto/AddFilm';
+import { IEditFilm } from './dto/EditFilm';
+
 
 
 class FilmModelAdapterOptions implements IModelAdapterOptions {
@@ -177,43 +179,145 @@ class FilmService extends BaseService<FilmModel> {
         });
     }
 
-/*
-    public async edit(
-        filmId: number,
-        data: IEditFilm,
-        options: Partial<FilmModelAdapterOptions> = { },
-    ): Promise<FilmModel|IErrorResponse> {
-        return new Promise<FilmModel|IErrorResponse>(resolve => {
-            const sql = `
-                UPDATE 
-                    film 
-                 SET 
-                    title = ? , 
-                    serbian_title = ? ,
-                    year = ? , 
-                    director_name = ? , 
-                    description = ? , 
-                    picture_path = ?
-                 WHERE 
-                    film_id = ?;`;
-            this.db.execute(sql , [
-                data.title , 
-                data.serbianTitle , 
-                data.year , 
-                data.directorName , 
-                data.description , 
-                data.picturePath ])
-                .then(async result => {
-                    resolve(await this.getById(filmId, options));
-                })
-                .catch(error => {
-                    resolve({
-                        errorCode: error?.errno,
-                        errorMessage: error?.sqlMessage
+    private editFilm(filmId: number, data: IEditFilm) {
+        return this.db.execute(
+            `UPDATE
+                film
+            SET
+                title =           ?,
+                serbian_title =   ?,
+                year =            ?,
+                director_name =   ?, 
+                description =     ?,
+                category_id =     ?
+            WHERE
+                film_id = ?;`,
+            [
+                data.title,
+                data.serbianTitle,
+                data.year,
+                data.directorName,
+                data.description,
+                data.categoryId,
+                filmId
+            ]
+        );
+    }
+
+    private deleteFilmGenre(filmId: number, genreId: number) {
+        return this.db.execute(
+            `DELETE FROM
+                film_genre
+            WHERE
+                film_id = ? AND
+                genre_id = ?;`,
+            [
+                filmId,
+                genreId,
+            ]
+        );
+    }
+
+    private addNewGenres(filmId: number, ng: FilmGenres) {
+        return this.db.execute(
+            `INSERT
+                film_genre
+            SET
+                film_id = ?,
+                genre_id = ?;`,
+            [
+                filmId,
+                ng.genreId,
+            ],
+        );
+    }
+
+    public async edit(filmId: number, data: IEditFilm):Promise<FilmModel|null|IErrorResponse> {
+        return  new Promise<FilmModel|null|IErrorResponse>(async resolve => {
+            const currentFilm = await this.getById(filmId,{
+                loadGenres: true,
+            });
+
+            if (currentFilm === null) {
+                return resolve(null);
+                
+            }
+
+            const rollbackAndResolve = async (error) => {
+                await this.db.rollback();
+                resolve({
+                    errorCode: error?.errno,
+                    errorMessage: error?.sqlMessage
+                });
+            }
+
+            this.db.beginTransaction()
+                .then(async () => {
+                     this.editFilm(filmId , data)
+                    .catch( error => {
+                        rollbackAndResolve({
+                            errno: error?.errno,
+                            sqlMessage: "Part film: " + error?.sqlMessage,
+                        });
+                    })
+                })  
+                .then(async () => {
+                    const willHaveGenres = data.genres.map(whg => whg.genreId);
+                    const currentGenres = (currentFilm as FilmModel).genres.map(cg => cg.genreId)
+
+                        for (const currentGenre of currentGenres ) {
+                            if(!willHaveGenres.includes(currentGenre)) {
+                                this.deleteFilmGenre(filmId, currentGenre)
+                                .catch(error => {
+                                    rollbackAndResolve({
+                                        errno: error?.errno,
+                                        sqlMessage: `Part delete genre id(${currentGenre}):${error?.sqlMessage}`
+                                    });
+                                });
+                    
+                            }
+                        }
+
+                    })
+                    .then(async () => {
+                        for (const ag of data.genres) {
+                            this.addNewGenres(filmId, ag)
+                            .catch(error => {
+                                rollbackAndResolve({
+                                    errno: error?.errno,
+                                    sqlMessage: `Part add genre id(${ag.genreId}):${error?.sqlMessage}`
+                                });
+                            });
+                        }
+                    })
+                    .then(async () => {
+                        this.db.commit()
+                        .catch(error => {
+                            rollbackAndResolve({
+                                errno: error?.errno,
+                                sqlMessage: `Part save changes: ${error?.sqlMessage}`,
+                            });
+                        });
+                    })
+                    .then(async () => {
+                        resolve(await this.getById(filmId, {
+                            loadCategory: true,
+                            loadGenres: true,
+                            loadPhotos: true,
+                        }));
+                    })
+                    .catch(async error => {
+                        await this.db.rollback();
+    
+                        resolve({
+                            errorCode : error?.errno,
+                            errorMessage:  error?.sqlMessage
+                        });
                     });
-                })
-        });
-    } */
+
+            });
+        }
+
 }
 
 export default FilmService;

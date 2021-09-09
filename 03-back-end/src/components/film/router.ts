@@ -13,6 +13,6 @@ export default class FilmRouter implements IRouter {
         application.get("/film/:id" ,          filmController.getById.bind(filmController));
         application.get("/category/:cid/film", filmController.getAllFilmFromOneCategory.bind(filmController)) //:id => indikator za promenjive rute(varjabilno)
         application.post("/film" ,             filmController.add.bind(filmController));
-        //application.put("/film/:id",           filmController.edit.bind(filmController));
+        application.put("/film/:id" ,          filmController.edit.bind(filmController));
     }
 }

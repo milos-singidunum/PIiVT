@@ -1,4 +1,5 @@
 import Ajv from "ajv";
+import { FilmGenres } from "../model";
 
 interface IEditFilm {
     title: string,
@@ -6,20 +7,23 @@ interface IEditFilm {
     year: string,
     directorName: string,
     description: string;
-    picturePath: string;
     categoryId: number;
+    genres: FilmGenres[];
 }
+
+
 
 const ajv = new Ajv();
 
 const IEditFilmValidator = ajv.compile({
     type: "object",
     properties: {
+
         title: {
             type: "string",
             minLength: 2,
             maxLength:64,
-        },
+        }, 
         serbianTitle: {
             type: "string",
             minLength: 2,
@@ -37,26 +41,39 @@ const IEditFilmValidator = ajv.compile({
         },
         description: {
             type: "string",
-            minLength: 32,
             maxLength:255,
-        },
-        picturePath: {
-            type: "string",
-            maxLength: 255,
-            pattern: "\.(png|jpg)$",
         },
         categoryId: {
             type: "integer",
             minimum:1,
         },
+        genres: {
+            type: "array",
+            minItems: 0,
+            uniqueItems: true,
+            items: {
+                type: "object",
+                properties: {
+                    genreId: {
+                        type: "number",
+                        minimum: 1,
+                    }
+                },
+                required: [
+                    "genreId",
+                ],
+                additionalProperties: false,
+            },
+        },
     },
     required: [
-        "title",
-        "serbianTitle",
-        "year",
-        "directorName",
-        "description",
-        "picturePath",
+       "title",
+       "serbianTitle",
+       "year",
+       "directorName",
+       "description",
+       "categoryId",
+       "genres",
     ],
     additionalProperties: false,
 

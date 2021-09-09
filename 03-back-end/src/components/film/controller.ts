@@ -7,6 +7,7 @@ import {v4} from "uuid";
 import sizeOf from "image-size";
 import * as path from "path";
 import * as sharp from "sharp";
+import { IEditFilm, IEditFilmValidator } from './dto/EditFilm';
 
 class FilmController extends BaseController{
 
@@ -177,36 +178,28 @@ class FilmController extends BaseController{
             res.status(400).send(e?.message);
         }
 
-        
     }
-    /*
-    public async edit(req: Request, res: Response) {
-        const filmId = +(req.params.id);
 
-        if (filmId <= 0) {
-            res.sendStatus(400);
-            return;
+    public async edit(req: Request , res:Response) {
+        const id: number = +(req.params?.id);
+
+        if (id <= 0) {
+            return res.sendStatus(400);
         }
 
-        if (!IEditFilmValidator(req.body)) {
-            res.status(400).send(IEditFilmValidator.errors);
-            return;
+        if(!IEditFilmValidator(req.body)) {
+            return res.status(400).send(IEditFilmValidator.errors);
         }
 
-        const result = await this.services.filmService.getById(filmId);
+        const result = await this.services.filmService.edit(id, req.body as IEditFilm);
 
         if (result === null) {
-            res.sendStatus(404);
-            return;
+            return res.sendStatus(404);
         }
 
-        if (!(result instanceof FilmModel)) {
-            res.status(500).send(result);
-            return;
-        }
+        res.send(result);
+    }
 
-        res.send(await this.services.filmService.edit(filmId, req.body as IEditFilm));
-    } */
 }
 
 export default FilmController;
