@@ -11,6 +11,8 @@ import CategoryService from "./components/category/service";
 import GenreService from "./components/genre/service";
 import FilmService from "./components/film/service";
 import * as fileUpload from "express-fileupload";
+import AdministratorService from './components/administrator/service';
+import AdministratorRouter from "./components/administrator/router";
 
 async function main() {
     const application: express.Application = express();
@@ -50,6 +52,7 @@ async function main() {
         categoryService:      new CategoryService(resources),
         filmService:          new FilmService(resources),
         genreService:         new GenreService(resources),
+        administratorService: new AdministratorService(resources),
        
     };
 
@@ -70,6 +73,7 @@ async function main() {
         new CategoryRouter(),
         new FilmRouter(),
         new GenreRouter(),
+        new AdministratorRouter(),
     ]);
     
     application.use((req,res) => {  // hendler use treba uvek da bude poslednji
