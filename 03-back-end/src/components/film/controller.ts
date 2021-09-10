@@ -217,6 +217,37 @@ class FilmController extends BaseController{
         res.send(await this.services.filmService.delete(id));
     }
 
+    public async deleteFilmPhoto(req: Request , res:Response) {
+        const filmId: number = +(req.params?.fid);
+        const photoId: number = +(req.params?.pid);
+
+        if (filmId <= 0 || photoId <= 0) return res.sendStatus(400);
+
+        const result = await this.services.filmService.deleteFilmPhoto(filmId, photoId);
+
+        if (result === null) return res.sendStatus(404);
+
+        res.send(result);
+    }
+
+    public async addFilmPhotos(req: Request, res: Response) {
+        const filmId: number = +(req.params?.id);
+
+        if (filmId <= 0) return res.sendStatus(400);
+
+        const item = await this.services.filmService.getById(filmId);
+
+        if (item === null) return res.sendStatus(404);
+
+        const uploadedPhotos = await this.uploadFiles(req, res);
+
+        if (uploadedPhotos.length === 0) {
+            return;
+        }
+
+        res.send(await this.services.filmService.addFilmPhotos(filmId, uploadedPhotos));
+    }
+
 }
 
 export default FilmController;

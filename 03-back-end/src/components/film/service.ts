@@ -1,6 +1,6 @@
 import IModelAdapterOptions from '../../common/IModelAdapterOptions.interface';
 import BaseService from '../../services/BaseService';
-import FilmModel, { FilmGenres } from './model';
+import FilmModel, { FilmGenres , FilmPhoto} from './model';
 import CategoryModel from '../category/model';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
 import { IAddFilm, UploadFilmPhoto } from './dto/AddFilm';
@@ -41,6 +41,10 @@ class FilmService extends BaseService<FilmModel> {
         if (options.loadGenres) {
             item.genres = await this.getAllGenresByFilmId(item.filmId);
         }
+
+        if (options.loadPhotos) {
+            item.photos = await this.getAllPhotosByFilmId(item.filmId);
+        }
         
 
         return item;
@@ -72,6 +76,22 @@ class FilmService extends BaseService<FilmModel> {
         }
 
         return items;
+    }
+
+    private async getAllPhotosByFilmId(filmId: number): Promise<FilmPhoto[]> {
+        const sql = `SELECT photo_id, image_path FROM photo WHERE film_id = ?;`;
+        const [ rows ] = await this.db.execute(sql, [ filmId ]);
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return [];
+        }
+
+        return rows.map(row => {
+            return {
+                photoId: +(row?.photo_id),
+                imagePath: row?.image_path,
+            }
+        });
     }
 
     public async getById(
@@ -437,6 +457,101 @@ class FilmService extends BaseService<FilmModel> {
                     }
                 }
            } catch (e) {}
+        }
+
+        public async deleteFilmPhoto(filmId: number, photoId: number): Promise<IErrorResponse|null> {
+            return new Promise<IErrorResponse|null>(async resolve => {
+                const film = await this.getById(filmId, {
+                    loadPhotos: true,
+                });
+    
+                if (film === null) {
+                    return resolve(null);
+                }
+    
+                const filteredPhotos = (film as FilmModel).photos.filter(p => p.photoId === photoId);
+    
+                if (filteredPhotos.length === 0) {
+                    return resolve(null);
+                }
+    
+                const photo = filteredPhotos[0];
+    
+                this.db.execute(
+                    `DELETE FROM photo WHERE photo_id = ?;`,
+                    [ photo.photoId ]
+                )
+                .then(() => {
+                    this.deleteFilmPhotoAndResizedVersion([
+                        photo.imagePath
+                    ]);
+    
+                    resolve({
+                        errorCode: 0,
+                        errorMessage: "Photo deleted.",
+                    });
+                })
+                .catch(error => resolve({
+                    errorCode: error?.errno,
+                    errorMessage: error?.sqlMessage
+                }))
+            });
+        }
+
+        public async addFilmPhotos(filmId: number , uploadedPhotos: UploadFilmPhoto[]):Promise<FilmModel|IErrorResponse|null> {
+            return new Promise<FilmModel|IErrorResponse|null>(async resolve => {
+                const film = await this.getById(filmId, {
+                    loadPhotos: true,
+                });
+    
+                if (film === null) {
+                    return resolve(null);
+                }
+    
+                this.db.beginTransaction()
+                    .then(() => {
+                        const promises = [];
+    
+                        for (const uploadedPhoto of uploadedPhotos) {
+                            promises.push(
+                                this.db.execute(
+                                    `INSERT photo SET film_id = ?, image_path = ?;`,
+                                    [ filmId, uploadedPhoto.imagePath, ]
+                                ),
+                            );
+                        }
+    
+                        Promise.all(promises)
+                            .then(async () => {
+                                await this.db.commit();
+    
+                                resolve(await this.services.filmService.getById(
+                                    filmId,
+                                    {
+                                        loadCategory: true,
+                                        loadGenres: true,
+                                        loadPhotos: true,
+                                    }
+                                ));
+                            })
+                            .catch(async error => {
+                                await this.db.rollback();
+    
+                                resolve({
+                                    errorCode: error?.errno,
+                                    errorMessage: error?.sqlMessage
+                                });
+                            });
+                    })
+                    .catch(async error => {
+                        await this.db.rollback();
+    
+                        resolve({
+                            errorCode: error?.errno,
+                            errorMessage: error?.sqlMessage
+                        });
+                    })
+            })
         }
 
 }

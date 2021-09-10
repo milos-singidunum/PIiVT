@@ -15,5 +15,7 @@ export default class FilmRouter implements IRouter {
         application.post("/film" ,             filmController.add.bind(filmController));
         application.put("/film/:id" ,          filmController.edit.bind(filmController));
         application.delete("/film/:id",        filmController.delete.bind(filmController));
+        application.delete("/film/:fid/photo/:pid",filmController.delete.bind(filmController));
+        application.post("/film/:id/photo",    filmController.addFilmPhotos.bind(filmController));
     }
 }
