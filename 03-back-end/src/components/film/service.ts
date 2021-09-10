@@ -5,6 +5,9 @@ import CategoryModel from '../category/model';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
 import { IAddFilm, UploadFilmPhoto } from './dto/AddFilm';
 import { IEditFilm } from './dto/EditFilm';
+import * as fs from "fs";
+import Config from '../../config/dev';
+import path = require('path');
 
 
 
@@ -316,6 +319,124 @@ class FilmService extends BaseService<FilmModel> {
                     });
 
             });
+        }
+
+        public async delete(filmId: number):Promise<IErrorResponse|null> {
+            return new Promise<IErrorResponse>(async resolve => {
+                const currentFilm = await this.getById(filmId, {
+                    loadCategory: true,
+                    loadGenres: true,
+                    loadPhotos: true,
+                });
+
+                if (currentFilm === null) {
+                    return resolve(null);
+                }
+
+                this.db.beginTransaction()
+                
+                .then(async () => {
+                    if (await this.deleteArticleGenres(filmId)) return;
+                    throw { errno: -1003, sqlMessage: "You can't delete genres for this movie", };
+                })
+
+                .then(async () => {
+                    const filesToDelete = await this.deleteFilmPhotoRecords(filmId);
+                    if (filesToDelete.length !== 0) return filesToDelete;
+                    throw { errno: -1005, sqlMessage: "Could not delete film photo records.", };
+                })
+                .then(async(filesToDelete) => {
+                   if (await this.deleteFilmRecord(filmId)) return filesToDelete;
+                   throw { errno: -1006, sqlMessage: "Could not delete the film records.", };
+                })
+                .then(async (filesToDelete) => {
+                    await this.db.commit();
+                    return filesToDelete;
+                })
+                .then( (filesToDelete) => {
+                    this.deleteFilmPhotoAndResizedVersion(filesToDelete);
+                })
+                .then( () => {
+                    resolve({
+                        errorCode: 0,
+                        errorMessage: "Film is success deleted!"
+                    });
+                })
+                .catch(async error => {
+                    await this.db.rollback();
+
+                    resolve({
+                        errorCode: error?.errno,
+                        errorMessage: error?.sqlMessage
+                    });
+                });
+        });
+    }
+
+        private async deleteArticleGenres(filmId: number): Promise<boolean> {
+            return new Promise<boolean>(async resolve => {
+                this.db.execute(
+                    `DELETE FROM film_genre WHERE film_id = ?;`,
+                    [ filmId ]
+                )
+                .then(() => resolve(true))
+                .catch(() => resolve(false));
+            });
+        }
+
+        private async deleteFilmPhotoRecords(filmId: number): Promise<string[]> {
+            return new Promise<string[]>(async resolve => {
+                const [ rows ] = await this.db.execute(
+                    `SELECT image_path FROM photo WHERE film_id = ?;`,
+                    [ filmId ]
+                );
+    
+                if (!Array.isArray(rows) || rows.length === 0) return resolve([]);
+    
+                const filesToDelete = rows.map(row => row?.image_path);
+    
+                this.db.execute(
+                    `DELETE FROM photo WHERE film_id = ?;`,
+                    [ filmId ]
+                )
+                .then(() => resolve(filesToDelete))
+                .catch(() => resolve([]))
+    
+                resolve(filesToDelete);
+            });
+        }
+
+        private async deleteFilmRecord(filmId: number): Promise<boolean> {
+            return new Promise<boolean>(async resolve => {
+                this.db.execute(
+                    `DELETE FROM film WHERE film_id = ?;`,
+                    [ filmId ]
+                )
+                .then(() => resolve(true))
+                .catch(() => resolve(false));
+            });
+        }
+
+        private async deleteFilmPhotoAndResizedVersion(filesToDelete: string[]) {
+           try{
+                for (const fileToDelete of filesToDelete) {
+                    fs.unlinkSync(fileToDelete);
+
+                    const pathParts = path.parse(fileToDelete);
+
+                    const directory = pathParts.dir;
+                    const filename  = pathParts.name;
+                    const extension = pathParts.ext;
+                    
+                    for (const resizeSpecification of Config.fileUpload.photos.resizes) {
+                        const resizedImagePath = directory + "/" +
+                                                 filename +
+                                                 resizeSpecification.sufix +
+                                                 extension;
+                        fs.unlinkSync(resizedImagePath);
+                    }
+                }
+           } catch (e) {}
         }
 
 }
