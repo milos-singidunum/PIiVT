@@ -16,6 +16,10 @@ import AdministratorRouter from "./components/administrator/router";
 import UserService from "./components/user/service";
 import UserRouter from "./components/user/router";
 import AuthRouter from "./components/auth/router";
+import SeriesService from "./components/series/service";
+import SeriesRouter from "./components/series/router";
+import TagService from './components/tag/service';
+import TagRouter from "./components/tag/router";
 
 async function main() {
     const application: express.Application = express();
@@ -57,6 +61,8 @@ async function main() {
         genreService:         new GenreService(resources),
         administratorService: new AdministratorService(resources),
         userService:          new UserService(resources),
+        seriesService:        new SeriesService(resources),
+        tagService:           new TagService(resources),
        
     };
 
@@ -80,6 +86,8 @@ async function main() {
         new AdministratorRouter(),
         new UserRouter(),
         new AuthRouter(),
+        new SeriesRouter(),
+        new TagRouter(),
     ]);
     
     application.use((req,res) => {  // hendler use treba uvek da bude poslednji

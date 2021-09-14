@@ -356,7 +356,7 @@ class FilmService extends BaseService<FilmModel> {
                 this.db.beginTransaction()
                 
                 .then(async () => {
-                    if (await this.deleteArticleGenres(filmId)) return;
+                    if (await this.deleteFilmGenres(filmId)) return;
                     throw { errno: -1003, sqlMessage: "You can't delete genres for this movie", };
                 })
 
@@ -393,7 +393,7 @@ class FilmService extends BaseService<FilmModel> {
         });
     }
 
-        private async deleteArticleGenres(filmId: number): Promise<boolean> {
+        private async deleteFilmGenres(filmId: number): Promise<boolean> {
             return new Promise<boolean>(async resolve => {
                 this.db.execute(
                     `DELETE FROM film_genre WHERE film_id = ?;`,
