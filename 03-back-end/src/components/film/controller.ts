@@ -25,6 +25,7 @@ class FilmController extends BaseController{
             loadCategory: true,
             loadGenres: true,
             loadPhotos: true,
+            loadTags: true,
         }
     );
 

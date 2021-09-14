@@ -6,6 +6,11 @@ class FilmGenres implements IModel {
     name?: string;
 }
 
+class FilmTags implements IModel {
+    tagId: number;
+    name?: string;
+}
+
 class Photo implements IModel {
     photoId: number;
     imagePath: string;
@@ -22,9 +27,11 @@ class FilmModel implements IModel {
     category?: CategoryModel;
     photos: Photo[] = [];
     genres: FilmGenres[] = [];
+    tags: FilmTags[] = [];
 
 }
 
 export default FilmModel;
 export { Photo as FilmPhoto };
 export { FilmGenres };
+export { FilmTags };

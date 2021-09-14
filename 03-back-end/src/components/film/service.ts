@@ -1,6 +1,6 @@
 import IModelAdapterOptions from '../../common/IModelAdapterOptions.interface';
 import BaseService from '../../services/BaseService';
-import FilmModel, { FilmGenres , FilmPhoto} from './model';
+import FilmModel, { FilmGenres , FilmPhoto, FilmTags} from './model';
 import CategoryModel from '../category/model';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
 import { IAddFilm, UploadFilmPhoto } from './dto/AddFilm';
@@ -15,6 +15,7 @@ class FilmModelAdapterOptions implements IModelAdapterOptions {
     loadCategory: boolean = true;
     loadGenres: boolean = true;
     loadPhotos: boolean = false;
+    loadTags: boolean = true;
 }
 
 
@@ -45,9 +46,46 @@ class FilmService extends BaseService<FilmModel> {
         if (options.loadPhotos) {
             item.photos = await this.getAllPhotosByFilmId(item.filmId);
         }
+
+        if (options.loadPhotos) {
+            item.photos = await this.getAllPhotosByFilmId(item.filmId);
+        }
+
+        if (options.loadPhotos) {
+            item.tags = await this.getAllTagsByFilmId(item.filmId);
+        }
+        
         
 
         return item;
+    }
+
+    private async getAllTagsByFilmId(filmId: number): Promise<FilmTags[]> {
+        const sql = `
+            SELECT
+                film_tag.tag_id,
+                tag.name
+            FROM
+                film_tag
+            INNER JOIN tag ON tag.tag_id = film_tag.tag_id
+            WHERE
+                film_tag.film_id = ?;`;
+        const [ rows ] = await this.db.execute(sql, [ filmId ]);
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return [];
+        }
+
+        const items: FilmTags[] = [];
+
+        for (const row of rows as any) {
+            items.push({
+                tagId: +(row?.tag_id),
+                name: row?.name,
+            });
+        }
+
+        return items;
     }
 
     private async getAllGenresByFilmId(filmId: number): Promise<FilmGenres[]> {
