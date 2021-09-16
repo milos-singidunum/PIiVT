@@ -9,15 +9,12 @@ import * as fs from "fs";
 import Config from '../../config/dev';
 import path = require('path');
 
-
-
-class FilmModelAdapterOptions implements IModelAdapterOptions {
+export class FilmModelAdapterOptions implements IModelAdapterOptions {
     loadCategory: boolean = true;
     loadGenres: boolean = true;
     loadPhotos: boolean = false;
     loadTags: boolean = true;
 }
-
 
 class FilmService extends BaseService<FilmModel> {
      protected async adaptModel(

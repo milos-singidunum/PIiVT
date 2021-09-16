@@ -20,6 +20,7 @@ import SeriesService from "./components/series/service";
 import SeriesRouter from "./components/series/router";
 import TagService from './components/tag/service';
 import TagRouter from "./components/tag/router";
+import ReviewService from "./components/review/service";
 
 async function main() {
     const application: express.Application = express();
@@ -63,6 +64,7 @@ async function main() {
         userService:          new UserService(resources),
         seriesService:        new SeriesService(resources),
         tagService:           new TagService(resources),
+        reviewService:        new ReviewService(resources),
        
     };
 
