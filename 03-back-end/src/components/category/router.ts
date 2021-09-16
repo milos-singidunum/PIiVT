@@ -16,6 +16,10 @@ export default class CategoryRouter implements IRouter {
             categoryController.getAll.bind(categoryController)
         );
         //application.get("/category" , categoryController.getAll.bind(categoryController));
-        application.get("/category/:id", categoryController.getById.bind(categoryController)) //:id => indikator za promenjive rute(varjabilno)
+    
+        application.get(
+            "/category/:id",
+            AuthMiddleware.getVerifier("administrator", "user"),
+            categoryController.getById.bind(categoryController)) //:id => indikator za promenjive rute(varjabilno)
     }
 }

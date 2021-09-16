@@ -1,6 +1,7 @@
 import * as express from "express";
 import IApplicationResources from "../../common/IApplicationResources.interface";
 import IRouter from "../../common/IRouter.interface";
+import AuthMiddleware from "../../middleware/auth.middleware";
 import TagController from "./controller";
 
 export default class TagRouter implements IRouter {
@@ -8,9 +9,23 @@ export default class TagRouter implements IRouter {
 
         const tagController: TagController = new TagController(resources);
 
-        application.get("/tag" , tagController.getAll.bind(tagController));
-        application.get("/tag/:id" , tagController.getById.bind(tagController));
-        application.post("/tag" ,tagController.add.bind(tagController));
-        application.put("/tag/:id",tagController.edit.bind(tagController));
+        application.get("/tag" ,
+            AuthMiddleware.getVerifier("administrator", "user"),
+            tagController.getAll.bind(tagController));
+
+        application.get(
+            "/tag/:id" ,
+             AuthMiddleware.getVerifier("administrator", "user"),
+             tagController.getById.bind(tagController));
+       
+        application.post(
+            "/tag" ,
+            AuthMiddleware.getVerifier("administrator"),
+            tagController.add.bind(tagController));
+
+        application.put(
+            "/tag/:id",
+            AuthMiddleware.getVerifier("administrator"),
+            tagController.edit.bind(tagController));
     }
 }
