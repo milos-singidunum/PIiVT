@@ -21,5 +21,25 @@ export default class CategoryRouter implements IRouter {
             "/category/:id",
             AuthMiddleware.getVerifier("administrator", "user"),
             categoryController.getById.bind(categoryController)) //:id => indikator za promenjive rute(varjabilno)
+    
+            application.post("/category",
+            AuthMiddleware.getVerifier("administrator"),
+            categoryController.add.bind(categoryController)
+        );
+
+        application.put(
+            "/category/:id",
+            AuthMiddleware.getVerifier("administrator"),
+            categoryController.edit.bind(categoryController)
+        );
+
+        application.delete(
+            "/category/:id",
+            AuthMiddleware.getVerifier("administrator"),
+            categoryController.deleteById.bind(categoryController)
+        );
+    
     }
+
+    
 }
