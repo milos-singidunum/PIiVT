@@ -2,13 +2,16 @@ import IModelAdapterOptions from '../../common/IModelAdapterOptions.interface';
 import BaseService from '../../services/BaseService';
 import CategoryModel from '../category/model';
 import IErrorResponse from '../../common/IErrorResponse.intefrace';
-import SeriesModel, { SeriesGenre } from './model';
+import SeriesModel, { SeriesGenre  } from './model';
+import {Episodes} from './model';
 import { IAddSeries } from './dto/IAddSeries';
 import { IEditSeries } from './dto/IEditSeries';
+import { IAddEpisodes } from './dto/IAddEpisode';
 
 class SeriesModelAdapterOptions implements IModelAdapterOptions {
     loadCategory: boolean = true;
     loadGenres: boolean = true;
+    loadEpisodes : boolean = true;
 }
 
 
@@ -19,7 +22,7 @@ class SeriesService extends BaseService<SeriesModel> {
     ): Promise<SeriesModel> {
         const item: SeriesModel = new SeriesModel();
 
-        item.showId = +(data?.show_id);
+        item.showId = +(data?.tv_show_id);
         item.title = data?.title;
         item.serbianTitle = data?.serbian_title;
         item.year = data?.year;
@@ -36,6 +39,10 @@ class SeriesService extends BaseService<SeriesModel> {
         if (options.loadGenres) {
             item.genres = await this.getAllGenresBySeriesId(item.showId);
         }
+
+       if (options.loadEpisodes) {
+            item.episodes = await this.getAllEpisodesBySeriesId(item.showId);
+        }
         
 
         return item;
@@ -50,7 +57,7 @@ class SeriesService extends BaseService<SeriesModel> {
                 show_genre
             INNER JOIN genre ON genre.genre_id = show_genre.genre_id
             WHERE
-                show_genre.show_id = ?;`;
+                show_genre.tv_show_id = ?;`;
         const [ rows ] = await this.db.execute(sql, [ showId ]);
 
         if (!Array.isArray(rows) || rows.length === 0) {
@@ -69,18 +76,47 @@ class SeriesService extends BaseService<SeriesModel> {
         return items;
     }
 
+    private async getAllEpisodesBySeriesId(showId: number): Promise<Episodes[]> {
+        const sql = `
+            SELECT
+                *
+            FROM
+                episodes
+            WHERE
+                tv_show_id = ?;`;
+        const [ rows ] = await this.db.execute(sql, [ showId ]);
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return [];
+        }
+
+        const items: Episodes[] = [];
+
+        for (const row of rows as any) {
+            items.push({
+                episodeId: +(row?.episodes_id),
+                episodeNum: row?.episode_num,
+                season: row?.season,
+                description: row?.description,
+                episodeName: row?.episode_name,
+            });
+        }
+
+        return items;
+    } 
+
     public async getById(
         showId: number,
         options: Partial<SeriesModelAdapterOptions> = {},
     ): Promise<SeriesModel|IErrorResponse|null> {
-        return  this.getByIdFromTable("show" , showId, options);
+        return  this.getByIdFromTable("tv_show" , showId, options);
     }
 
     public async getAll(
         options: Partial<SeriesModelAdapterOptions> = {},
     ): Promise<SeriesModel[]|IErrorResponse> {
         return await this.getAllFromTable<SeriesModelAdapterOptions>(
-            'show' ,
+            'tv_show' ,
             options,
              );
     }
@@ -89,8 +125,10 @@ class SeriesService extends BaseService<SeriesModel> {
         categoryId:number,
         options: Partial<SeriesModelAdapterOptions> = { },
     ): Promise<SeriesModel[]|IErrorResponse> {
-        return await this.getAllByFieldNameFromTable("show", "category_id" , categoryId , options);
+        return await this.getAllByFieldNameFromTable("tv_show", "category_id" , categoryId , options);
     }
+
+
     
 
     public async add(
@@ -100,7 +138,7 @@ class SeriesService extends BaseService<SeriesModel> {
             this.db.beginTransaction()
             .then( () => {
                this.db.execute(
-                   `INSERT show
+                   `INSERT tv_show
                     SET 
                     title =           ?,
                     serbian_title =   ?,
@@ -128,7 +166,7 @@ class SeriesService extends BaseService<SeriesModel> {
                         promises.push(
                             this.db.execute(
                                 `INSERT show_genre
-                                SET show_id = ? ,  genre_id = ?;`,
+                                SET tv_show_id = ? ,  genre_id = ?;`,
                                 [newShowId , showGenre.genreId ]
                             ),
                         );
@@ -168,10 +206,92 @@ class SeriesService extends BaseService<SeriesModel> {
         });
     }
 
+    public async addSeriesWithEpisodes(
+        data: IAddEpisodes,
+    ): Promise<SeriesModel|IErrorResponse> {
+        return new Promise<SeriesModel|IErrorResponse>(resolve => {
+            this.db.beginTransaction()
+            .then( () => {
+               this.db.execute(
+                   `INSERT tv_show
+                    SET 
+                    title =           ?,
+                    serbian_title =   ?,
+                    year =            ?,
+                    director_name =   ?, 
+                    description =     ?,
+                    image_path  =     ?,
+                    category_id =     ?; 
+                `,
+                [
+                    data.title,
+                    data.serbianTitle,
+                    data.year,
+                    data.directorName,
+                    data.description,
+                    data.imagePath,
+                    data.categoryId,
+                ]
+                ).then(async (res: any) => {
+                    const newShowId: number = +(res[0]?.insertId);
+                    
+                    const promises = [];
+
+                    for (const showEpisodes of data.episodes) {
+                        promises.push(
+                            this.db.execute(
+                                `INSERT episodes
+                                SET 
+                                season = ? ,
+                                episode_name = ?,
+                                episode_num = ?,
+                                description = ?;`,
+                                [newShowId , showEpisodes.season,
+                                showEpisodes.episodeName,showEpisodes.episodeNum,
+                                showEpisodes.description ]
+                            ),
+                        );
+                    } 
+
+                    Promise.all(promises)
+                    .then(async () => {
+                        await this.db.commit();
+
+                        resolve(await this.services.seriesService.getById(
+                            newShowId,
+                            {
+                                loadCategory: true,
+                                loadGenres: true,
+                                loadEpisodes: true,
+                        
+                            } 
+                        ))
+                    })
+                    .catch(async error => {
+                        await this.db.rollback();
+    
+                        resolve({
+                            errorCode : error?.errno,
+                            errorMessage:  error?.sqlMessage
+                        });
+                    })
+                }) 
+                .catch(async error => {
+                    await this.db.rollback();
+
+                    resolve({
+                        errorCode : error?.errno,
+                        errorMessage:  error?.sqlMessage
+                    });
+                })
+            });
+        });
+    }
+
     private editSeries(filmId: number, data: IEditSeries) {
         return this.db.execute(
             `UPDATE
-                show
+                tv_show
             SET
                 title =           ?,
                 serbian_title =   ?,
@@ -181,7 +301,7 @@ class SeriesService extends BaseService<SeriesModel> {
                 description =     ?,
                 category_id =     ?
             WHERE
-                show_id = ?;`,
+                tv_show_id = ?;`,
             [
                 data.title,
                 data.serbianTitle,
@@ -200,7 +320,7 @@ class SeriesService extends BaseService<SeriesModel> {
             `DELETE FROM
                 show_genre
             WHERE
-                show_id = ? AND
+                tv_show_id = ? AND
                 genre_id = ?;`,
             [
                 showId,
@@ -214,7 +334,7 @@ class SeriesService extends BaseService<SeriesModel> {
             `INSERT
                 show_genre
             SET
-                show_id = ?,
+                tv_show_id = ?,
                 genre_id = ?;`,
             [
                 showId,
@@ -354,7 +474,7 @@ class SeriesService extends BaseService<SeriesModel> {
         private async deleteSeriesGenres(showId: number): Promise<boolean> {
             return new Promise<boolean>(async resolve => {
                 this.db.execute(
-                    `DELETE FROM show_genre WHERE show_id = ?;`,
+                    `DELETE FROM show_genre WHERE tv_show_id = ?;`,
                     [ showId ]
                 )
                 .then(() => resolve(true))
@@ -365,7 +485,7 @@ class SeriesService extends BaseService<SeriesModel> {
         private async deleteSeriesRecord(showId: number): Promise<boolean> {
             return new Promise<boolean>(async resolve => {
                 this.db.execute(
-                    `DELETE FROM show WHERE show_id = ?;`,
+                    `DELETE FROM tv_show WHERE tv_show_id = ?;`,
                     [ showId ]
                 )
                 .then(() => resolve(true))

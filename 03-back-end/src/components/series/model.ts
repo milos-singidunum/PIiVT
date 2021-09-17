@@ -6,6 +6,14 @@ class SeriesGenre implements IModel {
     name?: string;
 }
 
+class Episodes implements IModel {
+    episodeId: number;
+    season : string;
+    episodeName: string;
+    episodeNum: string;
+    description: string;
+}
+
 
 class SeriesModel implements IModel {
     showId: number;
@@ -18,9 +26,11 @@ class SeriesModel implements IModel {
     categoryId: number;
     category?: CategoryModel;
     genres: SeriesGenre[] = [];
+    episodes: Episodes[] = [];
 
 }
 
 export default SeriesModel;
 
 export { SeriesGenre };
+export { Episodes }

@@ -9,10 +9,7 @@ export default class SeriesRouter implements IRouter {
         //controler
         const seriesController: SeriesController = new SeriesController(resources);
 
-        application.get(
-            "/show" ,
-            AuthMiddleware.getVerifier("administrator", "user"),
-            seriesController.getAll.bind(seriesController));
+        application.get("/show" ,seriesController.getAll.bind(seriesController));
 
         application.get(
             "/show/:id" ,
@@ -28,6 +25,11 @@ export default class SeriesRouter implements IRouter {
             "/show" ,
             AuthMiddleware.getVerifier("administrator"),
             seriesController.add.bind(seriesController));
+
+        application.post(
+            "/show/episodes" ,
+            //AuthMiddleware.getVerifier("administrator"),
+            seriesController.addSeriesWithEpisodes.bind(seriesController));
 
         application.put(
             "/show/:id" ,

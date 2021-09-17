@@ -1,6 +1,7 @@
 import { Request, Response , NextFunction } from 'express';
 import BaseController from '../../common/BaseController';
 import Config from '../../config/dev';
+import { IAddEpisodes, IAddEpisodesValidator } from './dto/IAddEpisode';
 import { IAddSeries, IAddSeriesValidator } from './dto/IAddSeries';
 import { IEditSeries, IEditSeriesValidator } from './dto/IEditSeries';
 
@@ -19,6 +20,7 @@ class SeriesController extends BaseController{
         {
             loadCategory: true,
             loadGenres: true,
+            loadEpisodes: true,
         }
     );
 
@@ -58,6 +60,27 @@ class SeriesController extends BaseController{
             }
 
             const result = await this.services.seriesService.add(data as IAddSeries);
+
+            res.send(result);
+
+         } catch (e) {
+            
+            res.status(400).send(e?.message);
+        }
+
+    }
+
+    public async addSeriesWithEpisodes(req: Request , res: Response) {
+        try {
+
+            const data = JSON.parse(req.body?.data);
+
+            if (!IAddEpisodesValidator(data)) {
+                res.status(400).send(IAddEpisodesValidator.errors);
+                return;
+            }
+
+            const result = await this.services.seriesService.addSeriesWithEpisodes(data as IAddEpisodes);
 
             res.send(result);
 
